@@ -41,4 +41,14 @@ public:
 
 	// 이동처리 함수
 	void Move(const FInputActionValue& Values);
+
+public: // 마우스 입력처리
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* IA_Mouse;
+	// 회전처리 함수
+	void Turn(const FInputActionValue& Values);
+
+protected:
+	UPROPERTY(VisibleAnywhere, Category="VRCamera")
+	class UCameraComponent* VRCamera;
 };
