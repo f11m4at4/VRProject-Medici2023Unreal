@@ -51,4 +51,15 @@ public: // 마우스 입력처리
 protected:
 	UPROPERTY(VisibleAnywhere, Category="VRCamera")
 	class UCameraComponent* VRCamera;
+
+	// 컨트롤러
+	UPROPERTY(VisibleAnywhere, Category="MotionController")
+	class UMotionControllerComponent* LeftHand;
+	UPROPERTY(VisibleAnywhere, Category="MotionController")
+	class UMotionControllerComponent* RightHand;
+	// 사용할 손 모델
+	UPROPERTY(VisibleAnywhere, Category="MotionController")
+	class USkeletalMeshComponent* LeftHandMesh;
+	UPROPERTY(VisibleAnywhere, Category="MotionController")
+	class USkeletalMeshComponent* RightHandMesh;
 };

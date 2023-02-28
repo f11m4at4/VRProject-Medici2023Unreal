@@ -7,6 +7,7 @@
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include <Camera/CameraComponent.h>
+#include <MotionControllerComponent.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -17,6 +18,40 @@ AVRPlayer::AVRPlayer()
 	VRCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("VRCamera"));
 	VRCamera->SetupAttachment(RootComponent);
 	VRCamera->bUsePawnControlRotation = true;
+
+	// 손추가
+	LeftHand = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftHand"));
+	LeftHand->SetupAttachment(RootComponent);
+	LeftHand->SetTrackingMotionSource(FName("Left"));
+	
+	RightHand = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightHand"));
+	RightHand->SetupAttachment(RootComponent);
+	RightHand->SetTrackingMotionSource(FName("Right"));
+
+	// 스켈레탈메시컴포넌트 만들기
+	LeftHandMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("LeftHandMesh"));
+	LeftHandMesh->SetupAttachment(LeftHand);
+
+	// 스켈레탈메시 로드해서 할당
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMesh(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_MannyXR_left.SKM_MannyXR_left'"));
+	if (TempMesh.Succeeded())
+	{
+		LeftHandMesh->SetSkeletalMesh(TempMesh.Object);
+		LeftHandMesh->SetRelativeLocation(FVector(-2.9f, -3.5f, 4.5f));
+		LeftHandMesh->SetRelativeRotation(FRotator(-25, -180, 90));
+	}
+
+	// 오른손 메시
+	RightHandMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("RightHandMesh"));
+	RightHandMesh->SetupAttachment(RightHand);
+
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMesh2(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_MannyXR_right.SKM_MannyXR_right'"));
+	if (TempMesh2.Succeeded())
+	{
+		RightHandMesh->SetSkeletalMesh(TempMesh2.Object);
+		RightHandMesh->SetRelativeLocation(FVector(-2.9f, 3.5f, 4.5f));
+		RightHandMesh->SetRelativeRotation(FRotator(25, 0, 90));
+	}
 }
 
 // Called when the game starts or when spawned
