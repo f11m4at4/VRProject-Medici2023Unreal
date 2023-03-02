@@ -173,6 +173,33 @@ void AVRPlayer::DrawTeleportStraight()
 	FVector StartPos = RightHand->GetComponentLocation();
 	FVector EndPos = StartPos + RightHand->GetForwardVector() * 1000;
 
+	// 두 점 사이에 충돌체가 있는지 체크하자
+	CheckHitTeleport(StartPos, EndPos);
+
 	DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, -1, 0, 1);
+}
+
+bool AVRPlayer::CheckHitTeleport(FVector LastPos, FVector& CurPos)
+{
+	FHitResult HitInfo;
+	bool bHit = HitTest(LastPos, CurPos, HitInfo);
+	// 만약 부딪힌 대상이 바닥이라면
+	if (bHit && HitInfo.GetActor()->GetName().Contains(TEXT("Floor")))
+	{
+		// 마지막 점을(EndPos) 최종 점으로 수정하고 싶다.
+		CurPos = HitInfo.Location;
+	}
+	return bHit;
+}
+
+bool AVRPlayer::HitTest(FVector LastPos, FVector CurPos, FHitResult& HitInfo)
+{
+	FCollisionQueryParams Params;
+	// 자기자신은 무시해라
+	Params.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(HitInfo, LastPos, CurPos, ECC_Visibility, Params);
+
+	return bHit;
 }
 

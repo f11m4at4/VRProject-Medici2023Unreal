@@ -82,6 +82,11 @@ public:	// Teleport Straight
 	bool ResetTeleport();
 	// 직선 텔레포트 처리하기
 	void DrawTeleportStraight();
+	// 텔레포트 선과 충돌체크 함수
+	bool CheckHitTeleport(FVector LastPos, FVector& CurPos);
+	// 충돌처리 함수
+	bool HitTest(FVector LastPos, FVector CurPos, FHitResult& HitInfo);
+
 	// 텔레포트 입력액션
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	class UInputAction* IA_Teleport;
