@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include <Camera/CameraComponent.h>
 #include <MotionControllerComponent.h>
+#include <DrawDebugHelpers.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -77,6 +78,8 @@ void AVRPlayer::BeginPlay()
 			subSystem->AddMappingContext(IMC_VRInput, 0);
 		}
 	}
+
+	ResetTeleport();
 }
 
 // Called every frame
@@ -84,6 +87,11 @@ void AVRPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// 텔레포트 확인 처리
+	if (bTeleporting)
+	{
+		DrawTeleportStraight();
+	}
 }
 
 // Called to bind functionality to input
@@ -97,6 +105,10 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		// Binding for Moving
 		InputSystem->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AVRPlayer::Move);
 		InputSystem->BindAction(IA_Mouse, ETriggerEvent::Triggered, this, &AVRPlayer::Turn);
+
+		InputSystem->BindAction(IA_Teleport, ETriggerEvent::Started, this, &AVRPlayer::TeleportStart);
+
+		InputSystem->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::TeleportEnd);
 	}
 }
 
@@ -122,5 +134,45 @@ void AVRPlayer::Turn(const FInputActionValue& Values)
 	FVector2D Axis = Values.Get<FVector2D>();
 	AddControllerYawInput(Axis.X);
 	AddControllerPitchInput(Axis.Y);
+}
+
+// 텔레포트 기능 활성화처리
+void AVRPlayer::TeleportStart(const FInputActionValue& Values)
+{
+	// 누르고 있는 중에는 사용자가 어디를 가리키는지 주시하고 싶다.
+	bTeleporting = true;
+}
+
+void AVRPlayer::TeleportEnd(const FInputActionValue& Values)
+{
+	// 텔레포트 기능 리셋
+	// 만약 텔레포트가 불가능하다면
+	if (ResetTeleport() == false)
+	{
+		// 다음 처리를 하지 않는다.
+		return;
+	}
+	// 텔레포트 위치로 이동하고 싶다.
+}
+
+bool AVRPlayer::ResetTeleport()
+{
+	// 텔레포트써클이 활성화 되어 있을 때만 텔레포트 가능하다.
+	bool bCanTeleport = TeleportCircle->GetVisibleFlag();
+	// 써클 안보이게 처리
+	TeleportCircle->SetVisibility(false);
+	bTeleporting = false;
+
+	return bCanTeleport;
+}
+
+void AVRPlayer::DrawTeleportStraight()
+{
+	// 직선을 그리고 싶다.
+	// 필요정보 : 시작점, 종료점
+	FVector StartPos = RightHand->GetComponentLocation();
+	FVector EndPos = StartPos + RightHand->GetForwardVector() * 1000;
+
+	DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, -1, 0, 1);
 }
 

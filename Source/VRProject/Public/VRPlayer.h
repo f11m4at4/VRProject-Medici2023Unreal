@@ -9,6 +9,11 @@
 
 // 사용자의 입력에따라 앞뒤좌우로 이동하고 싶다.
 // 필요속성 : 이동속도, 입력액션, 입력매핑컨텍스트
+// 사용자가 텔레포트 버튼을 눌렀다 떼면 텔레포트 되도록 하고 싶다.
+// 1. 텔레포트 버튼을 눌렀다 뗐으니까
+// 2. 사용자가 그 지점을 가리켰으니까
+// 3. 텔레포트 목적지가 필요하다.
+// 4. 텔레포트이동 하고 싶다.
 UCLASS()
 class VRPROJECT_API AVRPlayer : public ACharacter
 {
@@ -73,4 +78,11 @@ public:	// Teleport Straight
 	void TeleportStart(const FInputActionValue& Values);
 	// 버튼 뗐을 때 처리할 함수
 	void TeleportEnd(const FInputActionValue& Values);
+	// 텔레포트 기능 리셋
+	bool ResetTeleport();
+	// 직선 텔레포트 처리하기
+	void DrawTeleportStraight();
+	// 텔레포트 입력액션
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	class UInputAction* IA_Teleport;
 };
