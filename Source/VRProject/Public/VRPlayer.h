@@ -62,4 +62,15 @@ protected:
 	class USkeletalMeshComponent* LeftHandMesh;
 	UPROPERTY(VisibleAnywhere, Category="MotionController")
 	class USkeletalMeshComponent* RightHandMesh;
+
+public:	// Teleport Straight
+	UPROPERTY(VisibleAnywhere, Category="Teleport")
+	class UStaticMeshComponent* TeleportCircle;
+
+	// 텔레포트 기능 활성화 여부
+	bool bTeleporting = false;
+	// 버튼 눌렀을 때 처리할 함수
+	void TeleportStart(const FInputActionValue& Values);
+	// 버튼 뗐을 때 처리할 함수
+	void TeleportEnd(const FInputActionValue& Values);
 };

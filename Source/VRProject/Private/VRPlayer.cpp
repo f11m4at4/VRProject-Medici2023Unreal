@@ -52,6 +52,11 @@ AVRPlayer::AVRPlayer()
 		RightHandMesh->SetRelativeLocation(FVector(-2.9f, 3.5f, 4.5f));
 		RightHandMesh->SetRelativeRotation(FRotator(25, 0, 90));
 	}
+
+	// Teleport
+	TeleportCircle = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TeleportCircle"));
+	TeleportCircle->SetupAttachment(RootComponent);
+	TeleportCircle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 // Called when the game starts or when spawned
