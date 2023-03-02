@@ -9,6 +9,8 @@
 #include <Camera/CameraComponent.h>
 #include <MotionControllerComponent.h>
 #include <DrawDebugHelpers.h>
+#include <HeadMountedDisplayFunctionLibrary.h>
+#include <Components/CapsuleComponent.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -87,6 +89,13 @@ void AVRPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// HMD 가 연결돼 있지 않으면
+	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled() == false)
+	{
+		// -> 손이 카메라 방향과 일치하도록 하자
+		RightHand->SetRelativeRotation(VRCamera->GetRelativeRotation());
+	}
+
 	// 텔레포트 확인 처리
 	if (bTeleporting)
 	{
@@ -153,6 +162,7 @@ void AVRPlayer::TeleportEnd(const FInputActionValue& Values)
 		return;
 	}
 	// 텔레포트 위치로 이동하고 싶다.
+	SetActorLocation(TeleportLocation + FVector::UpVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 }
 
 bool AVRPlayer::ResetTeleport()
@@ -188,6 +198,15 @@ bool AVRPlayer::CheckHitTeleport(FVector LastPos, FVector& CurPos)
 	{
 		// 마지막 점을(EndPos) 최종 점으로 수정하고 싶다.
 		CurPos = HitInfo.Location;
+		// 써클 활성화
+		TeleportCircle->SetVisibility(true);
+		// 텔레포트써클을 위치
+		TeleportCircle->SetWorldLocation(CurPos);
+		TeleportLocation = CurPos;
+	}
+	else
+	{
+		TeleportCircle->SetVisibility(false);
 	}
 	return bHit;
 }

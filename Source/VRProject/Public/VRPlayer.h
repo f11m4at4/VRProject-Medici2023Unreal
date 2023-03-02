@@ -90,4 +90,7 @@ public:	// Teleport Straight
 	// 텔레포트 입력액션
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	class UInputAction* IA_Teleport;
+
+	// 텔레포트할 위치
+	FVector TeleportLocation;
 };
