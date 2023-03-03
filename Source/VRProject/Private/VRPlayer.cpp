@@ -99,7 +99,17 @@ void AVRPlayer::Tick(float DeltaTime)
 	// 텔레포트 확인 처리
 	if (bTeleporting)
 	{
-		DrawTeleportStraight();
+		// 만약 직선을 그린다면
+		if (bTeleportCurve == false)
+		{
+			DrawTeleportStraight();
+		}
+		// 그렇지 않으면
+		else
+		{
+			// 곡선 그리기
+			DrawTeleportCurve();
+		}
 	}
 }
 
@@ -220,5 +230,34 @@ bool AVRPlayer::HitTest(FVector LastPos, FVector CurPos, FHitResult& HitInfo)
 	bool bHit = GetWorld()->LineTraceSingleByChannel(HitInfo, LastPos, CurPos, ECC_Visibility, Params);
 
 	return bHit;
+}
+
+// 주어진 속도로 투사체를 날려보내고 투사체의 지나간 점을 기록하자
+void AVRPlayer::DrawTeleportCurve()
+{
+	// Lines 초기화
+	Lines.RemoveAt(0, Lines.Num());
+	// 주어진 속도로 투사체를 날려보내고 투사체의 지나간 점을 기록하자
+	// 1. 시작점, 방향, 힘도 투사체를 던지다.
+	FVector Pos = RightHand->GetComponentLocation();
+	FVector Dir = RightHand->GetForwardVector() * CurvedPower;
+	// 시작점을 가장 먼저 기록하자
+	Lines.Add(Pos);
+	for (int i = 0; i < LineSmooth; i++)
+	{
+		// 2. 투사체가 이동했으니까 반복적으로 
+		// v = v0 + at
+		Dir += FVector::UpVector * Gravity * SimulatedTime;
+		// P = P0 + vt
+		Pos += Dir * SimulatedTime;
+		// 3. 투사체의 위치에서
+		// 4. 점을 기록하자
+		Lines.Add(Pos);
+	}
+	// 곡선 그리기
+	for(int i=0;i<Lines.Num()-1;i++)
+	{
+		DrawDebugLine(GetWorld(), Lines[i], Lines[i+1], FColor::Red, false, -1, 0, 1);
+	}
 }
 

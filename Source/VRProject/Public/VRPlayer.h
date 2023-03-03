@@ -93,4 +93,26 @@ public:	// Teleport Straight
 
 	// 텔레포트할 위치
 	FVector TeleportLocation;
+
+private: // 곡선 텔레포트
+	// 곡선 텔레포트 사용여부
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	bool bTeleportCurve = true;
+	// 던지는 힘
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	float CurvedPower = 1500;
+	// 중력
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	float Gravity = -5000;
+	// 시뮬레이션시간
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	float SimulatedTime = 0.02f;
+	// 곡선을 이루는 점 개수
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	int32 LineSmooth = 40;
+	// 점을기억할 배열
+	UPROPERTY()
+	TArray<FVector> Lines;
+
+	void DrawTeleportCurve();
 };
