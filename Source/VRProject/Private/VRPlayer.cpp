@@ -11,6 +11,8 @@
 #include <DrawDebugHelpers.h>
 #include <HeadMountedDisplayFunctionLibrary.h>
 #include <Components/CapsuleComponent.h>
+#include <NiagaraComponent.h>
+#include <NiagaraDataInterfaceArrayFunctionLibrary.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -57,9 +59,12 @@ AVRPlayer::AVRPlayer()
 	}
 
 	// Teleport
-	TeleportCircle = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TeleportCircle"));
+	TeleportCircle = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TeleportCircle"));
 	TeleportCircle->SetupAttachment(RootComponent);
 	TeleportCircle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	TeleportCurveComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TeleportCurveComp"));
+	TeleportCurveComp->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -109,6 +114,12 @@ void AVRPlayer::Tick(float DeltaTime)
 		{
 			// 곡선 그리기
 			DrawTeleportCurve();
+		}
+
+		// 나이아가라를 이용해 선그리기
+		if (TeleportCurveComp)
+		{
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TeleportCurveComp, FName("User.PointArray"), Lines);
 		}
 	}
 }
@@ -160,6 +171,8 @@ void AVRPlayer::TeleportStart(const FInputActionValue& Values)
 {
 	// 누르고 있는 중에는 사용자가 어디를 가리키는지 주시하고 싶다.
 	bTeleporting = true;
+	// 라인이 보이도록 활성화
+	TeleportCurveComp->SetVisibility(true);
 }
 
 void AVRPlayer::TeleportEnd(const FInputActionValue& Values)
@@ -182,12 +195,14 @@ bool AVRPlayer::ResetTeleport()
 	// 써클 안보이게 처리
 	TeleportCircle->SetVisibility(false);
 	bTeleporting = false;
+	TeleportCurveComp->SetVisibility(false);
 
 	return bCanTeleport;
 }
 
 void AVRPlayer::DrawTeleportStraight()
 {
+	Lines.RemoveAt(0, Lines.Num());
 	// 직선을 그리고 싶다.
 	// 필요정보 : 시작점, 종료점
 	FVector StartPos = RightHand->GetComponentLocation();
@@ -195,8 +210,9 @@ void AVRPlayer::DrawTeleportStraight()
 
 	// 두 점 사이에 충돌체가 있는지 체크하자
 	CheckHitTeleport(StartPos, EndPos);
-
-	DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, -1, 0, 1);
+	Lines.Add(StartPos);
+	Lines.Add(EndPos);
+	//DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, -1, 0, 1);
 }
 
 bool AVRPlayer::CheckHitTeleport(FVector LastPos, FVector& CurPos)
@@ -245,19 +261,28 @@ void AVRPlayer::DrawTeleportCurve()
 	Lines.Add(Pos);
 	for (int i = 0; i < LineSmooth; i++)
 	{
+		// 이전 점 기억
+		FVector LastPos = Pos;
 		// 2. 투사체가 이동했으니까 반복적으로 
 		// v = v0 + at
 		Dir += FVector::UpVector * Gravity * SimulatedTime;
 		// P = P0 + vt
 		Pos += Dir * SimulatedTime;
 		// 3. 투사체의 위치에서
+		//  -> 점과 점 사이에 물체가 가로막고 있다면
+		if (CheckHitTeleport(LastPos, Pos))
+		{
+			//		-> 그점을 마지막 점으로 하자
+			Lines.Add(Pos);
+			break;
+		}
 		// 4. 점을 기록하자
 		Lines.Add(Pos);
 	}
-	// 곡선 그리기
-	for(int i=0;i<Lines.Num()-1;i++)
-	{
-		DrawDebugLine(GetWorld(), Lines[i], Lines[i+1], FColor::Red, false, -1, 0, 1);
-	}
+	//// 곡선 그리기
+	//for(int i=0;i<Lines.Num()-1;i++)
+	//{
+	//	DrawDebugLine(GetWorld(), Lines[i], Lines[i+1], FColor::Red, false, -1, 0, 1);
+	//}
 }
 

@@ -70,7 +70,7 @@ protected:
 
 public:	// Teleport Straight
 	UPROPERTY(VisibleAnywhere, Category="Teleport")
-	class UStaticMeshComponent* TeleportCircle;
+	class UNiagaraComponent* TeleportCircle;
 
 	// 텔레포트 기능 활성화 여부
 	bool bTeleporting = false;
@@ -115,4 +115,8 @@ private: // 곡선 텔레포트
 	TArray<FVector> Lines;
 
 	void DrawTeleportCurve();
+
+	// 사용할 나이아가라 컴포넌트(LineTrace)
+	UPROPERTY(VisibleAnywhere, Category="Teleport")
+	class UNiagaraComponent* TeleportCurveComp;
 };
