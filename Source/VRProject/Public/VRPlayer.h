@@ -119,4 +119,22 @@ private: // 곡선 텔레포트
 	// 사용할 나이아가라 컴포넌트(LineTrace)
 	UPROPERTY(VisibleAnywhere, Category="Teleport")
 	class UNiagaraComponent* TeleportCurveComp;
+
+private:
+	// 워프 사용여부
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	bool IsWarp = true;
+
+	// 타이머
+	UPROPERTY()
+	FTimerHandle WarpHandle;
+	// 경과시간
+	UPROPERTY()
+	float CurTime = 0;
+	// 워프할 때 걸릴 시간
+	UPROPERTY(EditAnywhere, Category="Teleport", meta=(AllowPrivateAccess = true))
+	float WarpTime = 0.2f;
+
+	// 워프 수행할 함수
+	void DoWarp();
 };

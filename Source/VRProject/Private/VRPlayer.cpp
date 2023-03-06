@@ -184,6 +184,14 @@ void AVRPlayer::TeleportEnd(const FInputActionValue& Values)
 		// 다음 처리를 하지 않는다.
 		return;
 	}
+
+	// 워프 사용시 워프처리
+	if (IsWarp)
+	{
+		DoWarp();
+		return;
+	}
+	// 그렇지 않을경우 텔레포트
 	// 텔레포트 위치로 이동하고 싶다.
 	SetActorLocation(TeleportLocation + FVector::UpVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 }
@@ -284,5 +292,56 @@ void AVRPlayer::DrawTeleportCurve()
 	//{
 	//	DrawDebugLine(GetWorld(), Lines[i], Lines[i+1], FColor::Red, false, -1, 0, 1);
 	//}
+}
+
+void AVRPlayer::DoWarp()
+{
+	// 워프기능이 활성화 되어 있을 때
+	if (IsWarp == false)
+	{
+		return;
+	}
+	// 워프처리 하고 싶다.
+	// -> 일정시간동안 빠르게 이동하는거야
+	// 경과시간 초기화
+	CurTime = 0;
+	// 충돌체 비활성화 
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 3. 시간이 흘러야한다.
+	// 2. 일정시간동안
+	// [캡처]()->{ body }
+	GetWorld()->GetTimerManager().SetTimer(WarpHandle, FTimerDelegate::CreateLambda(
+		[this]()->void
+		{
+			// body
+			// 일정시간안에 목적지에 도착하고 싶다.
+			// 1. 시간이 흘러야한다.
+			CurTime += GetWorld()->DeltaTimeSeconds;
+			// 현재
+			FVector CurPos = GetActorLocation();
+			// 도착
+			FVector EndPos = TeleportLocation + FVector::UpVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			// 2. 이동해야한다.
+			CurPos = FMath::Lerp<FVector>(CurPos, EndPos, CurTime / WarpTime);
+			// 3. 목적지에 도착
+			SetActorLocation(CurPos);
+			// 시간이 다 흘렀다면 
+			if (CurTime >= WarpTime)
+			{
+				// -> 그 위치로 할당하고
+				SetActorLocation(EndPos);
+				// -> 타이머 종료해주기
+				GetWorld()->GetTimerManager().ClearTimer(WarpHandle);
+				GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			}
+			// 거리가 거의 가까워졌다면 그 위치로 할당해주기.
+			// -> 타이머 종료하기(워프종료)
+			/*float Distance = FVector::Dist(CurPos, EndPos);
+			if (Distance < 0.1f)
+			{
+				CurPos = EndPos;
+			}*/
+		}
+	), 0.02f, true);
 }
 
