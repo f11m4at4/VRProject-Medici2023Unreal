@@ -137,4 +137,15 @@ private:
 
 	// 워프 수행할 함수
 	void DoWarp();
+
+private: // 총쏘기
+	UPROPERTY(EditDefaultsOnly, Category="Input", meta=(AllowPrivateAccess=true))
+	class UInputAction* IA_Fire;
+
+	// 총쏘기 처리할 함수
+	void FireInput(const FInputActionValue& Values);
+
+	// 집게손가락 표시할 모션컨트롤러
+	UPROPERTY(VisibleAnywhere, Category="HandComp", meta = (AllowPrivateAccess = true))
+	class UMotionControllerComponent* RightAim;
 };

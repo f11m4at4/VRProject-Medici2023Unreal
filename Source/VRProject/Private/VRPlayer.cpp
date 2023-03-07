@@ -12,7 +12,7 @@
 #include <HeadMountedDisplayFunctionLibrary.h>
 #include <Components/CapsuleComponent.h>
 #include <NiagaraComponent.h>
-#include <NiagaraDataInterfaceArrayFunctionLibrary.h>
+#include <../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -65,6 +65,11 @@ AVRPlayer::AVRPlayer()
 
 	TeleportCurveComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TeleportCurveComp"));
 	TeleportCurveComp->SetupAttachment(RootComponent);
+
+	// 집게손가락
+	RightAim = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightAim"));
+	RightAim->SetupAttachment(RootComponent);
+	RightAim->SetTrackingMotionSource(FName("RightAim"));
 }
 
 // Called when the game starts or when spawned
@@ -119,9 +124,14 @@ void AVRPlayer::Tick(float DeltaTime)
 		// 나이아가라를 이용해 선그리기
 		if (TeleportCurveComp)
 		{
-			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TeleportCurveComp, FName("User.PointArray"), Lines);
+			UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TeleportCurveComp, FName(TEXT("User.PointArray")), Lines);
 		}
 	}
+
+	FVector StartPos = RightAim->GetComponentLocation();
+	// 종료점
+	FVector EndPos = StartPos + RightAim->GetForwardVector() * 10000;
+	DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, -1, 0, 1);
 }
 
 // Called to bind functionality to input
@@ -139,6 +149,8 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		InputSystem->BindAction(IA_Teleport, ETriggerEvent::Started, this, &AVRPlayer::TeleportStart);
 
 		InputSystem->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::TeleportEnd);
+
+		InputSystem->BindAction(IA_Fire, ETriggerEvent::Started, this, &AVRPlayer::FireInput);
 	}
 }
 
@@ -343,5 +355,28 @@ void AVRPlayer::DoWarp()
 			}*/
 		}
 	), 0.02f, true);
+}
+
+void AVRPlayer::FireInput(const FInputActionValue& Values)
+{
+	// LineTrace 이용해서 총을 쏘고 싶다.
+	// 시작점
+	FVector StartPos = RightAim->GetComponentLocation();
+	// 종료점
+	FVector EndPos = StartPos + RightAim->GetForwardVector() * 10000;
+	// 총쏘기(LineTrace 동작)
+	FHitResult HitInfo;
+	bool bHit = HitTest(StartPos, EndPos, HitInfo);
+	// 만약 부딪히년 녀석이 있으면 날려보내자
+	if (bHit)
+	{
+		auto HitComp = HitInfo.GetComponent();
+		if (HitComp && HitComp->IsSimulatingPhysics())
+		{
+			// 날려보내자
+			// F = ma
+			HitComp->AddForceAtLocation((EndPos - StartPos).GetSafeNormal() * 100000 * HitComp->GetMass(), HitInfo.Location);
+		}
+	}
 }
 
