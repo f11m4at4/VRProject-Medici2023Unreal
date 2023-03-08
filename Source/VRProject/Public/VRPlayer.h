@@ -148,4 +148,14 @@ private: // 총쏘기
 	// 집게손가락 표시할 모션컨트롤러
 	UPROPERTY(VisibleAnywhere, Category="HandComp", meta = (AllowPrivateAccess = true))
 	class UMotionControllerComponent* RightAim;
+
+	// Crosshair
+	UPROPERTY(EditAnywhere, Category="Crosshair", meta = (AllowPrivateAccess = true))
+	TSubclassOf<AActor> CrosshairFactory;
+
+	// 인스턴스 크로스헤어
+	UPROPERTY()
+	AActor* Crosshair;
+	// 크로스헤어 그리기
+	void DrawCrosshair();
 };

@@ -14,6 +14,7 @@
 #include <NiagaraComponent.h>
 #include <../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
 
+#define PRINTTOScreen(msg) GEngine->AddOnScreenDebugMessage(0, 1, FColor::Blue, msg)
 // Sets default values
 AVRPlayer::AVRPlayer()
 {
@@ -92,6 +93,12 @@ void AVRPlayer::BeginPlay()
 	}
 
 	ResetTeleport();
+
+	// 크로스헤어 객체 만들기
+	if (CrosshairFactory)
+	{
+		Crosshair = GetWorld()->SpawnActor<AActor>(CrosshairFactory);
+	}
 }
 
 // Called every frame
@@ -104,6 +111,7 @@ void AVRPlayer::Tick(float DeltaTime)
 	{
 		// -> 손이 카메라 방향과 일치하도록 하자
 		RightHand->SetRelativeRotation(VRCamera->GetRelativeRotation());
+		RightAim->SetRelativeRotation(VRCamera->GetRelativeRotation());
 	}
 
 	// 텔레포트 확인 처리
@@ -128,10 +136,8 @@ void AVRPlayer::Tick(float DeltaTime)
 		}
 	}
 
-	FVector StartPos = RightAim->GetComponentLocation();
-	// 종료점
-	FVector EndPos = StartPos + RightAim->GetForwardVector() * 10000;
-	DrawDebugLine(GetWorld(), StartPos, EndPos, FColor::Red, false, -1, 0, 1);
+	// Crosshair
+	DrawCrosshair();
 }
 
 // Called to bind functionality to input
@@ -159,6 +165,7 @@ void AVRPlayer::Move(const FInputActionValue& Values)
 	// 사용자의 입력에따라 앞뒤좌우로 이동하고 싶다.
 	// 1. 사용자의 입력에 따라
 	FVector2D Axis = Values.Get<FVector2D>();
+	PRINTTOScreen(FString::Printf(TEXT("x : %.2f, y : %.2f"), Axis.X, Axis.Y));
 	AddMovementInput(GetActorForwardVector(), Axis.X);
 	AddMovementInput(GetActorRightVector(), Axis.Y);
 	//// 2. 앞뒤좌우라는 방향이 필요.
@@ -375,8 +382,44 @@ void AVRPlayer::FireInput(const FInputActionValue& Values)
 		{
 			// 날려보내자
 			// F = ma
-			HitComp->AddForceAtLocation((EndPos - StartPos).GetSafeNormal() * 100000 * HitComp->GetMass(), HitInfo.Location);
+			HitComp->AddForceAtLocation((EndPos - StartPos).GetSafeNormal() * 1000000 * HitComp->GetMass(), HitInfo.Location);
 		}
 	}
+}
+
+// 거리에 따라서 크로스헤어 크기가 같게 보이도록하자
+void AVRPlayer::DrawCrosshair()
+{
+	// 시작점
+	FVector StartPos = RightAim->GetComponentLocation();
+	// 끝점
+	FVector EndPos = StartPos + RightAim->GetForwardVector() * 10000;
+	// 충돌정보를 저장
+	FHitResult HitInfo;
+	// 충돌체크
+	bool bHit = HitTest(StartPos, EndPos, HitInfo);
+
+	float Distance = 0;
+	// -> 충돌이 발생하면 
+	if (bHit)
+	{
+		//		-> 충돌한 지점에 크로스헤어 표시
+		Crosshair->SetActorLocation(HitInfo.Location);
+		Distance = HitInfo.Distance;
+	}
+	// -> 그렇지 않으면
+	else
+	{
+		//		-> 그냥 끝점에 크로스헤어 표시
+		Crosshair->SetActorLocation(EndPos);
+		Distance = (EndPos - StartPos).Size();
+	}
+
+	Crosshair->SetActorScale3D(FVector(FMath::Max<float>(1, Distance)));
+
+	// 빌보딩
+	// -> 크로스헤어가 카메라를 바라보도록 처리
+	FVector Direction = Crosshair->GetActorLocation() - VRCamera->GetComponentLocation();
+	Crosshair->SetActorRotation(Direction.Rotation());
 }
 
