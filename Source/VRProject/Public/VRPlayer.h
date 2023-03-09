@@ -158,4 +158,19 @@ private: // 총쏘기
 	AActor* Crosshair;
 	// 크로스헤어 그리기
 	void DrawCrosshair();
+	
+public: // 잡기 버튼을 누르면 물체를 잡고 싶다.
+	// 필요속성 : 입력액션, 잡을 범위 
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	class UInputAction* IA_Grab;
+	// 잡을 범위
+	UPROPERTY(EditDefaultsOnly, Category="Grab")
+	float GrabRange = 100;
+
+	// 잡은 물체 기억
+	UPROPERTY()
+	class UPrimitiveComponent* GrabbedObject;
+
+	// 잡기시도기능
+	void TryGrab();
 };

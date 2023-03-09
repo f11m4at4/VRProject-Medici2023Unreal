@@ -23,7 +23,7 @@ AVRPlayer::AVRPlayer()
 
 	VRCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("VRCamera"));
 	VRCamera->SetupAttachment(RootComponent);
-	VRCamera->bUsePawnControlRotation = true;
+	VRCamera->bUsePawnControlRotation = false;
 
 	// 손추가
 	LeftHand = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftHand"));
@@ -99,6 +99,22 @@ void AVRPlayer::BeginPlay()
 	{
 		Crosshair = GetWorld()->SpawnActor<AActor>(CrosshairFactory);
 	}
+
+	// HMD 가 연결되어 있지 않다면 
+	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled() == false)
+	{
+		// Hand 을 테스트 할 수 있는 위치로 이동시키자.
+		RightHand->SetRelativeLocation(FVector(20, 20, 0));
+		RightAim->SetRelativeLocation(FVector(20, 20, 0));
+		// 카메라의 Use Pawn Control Rotation 을 활성화 시키자
+		VRCamera->bUsePawnControlRotation = true;
+	}
+	// 만약 HMD 가 열결되어 있다면
+	else
+	{
+		// -> 기본 트랙킹 offset 설정
+		UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Eye);
+	}
 }
 
 // Called every frame
@@ -157,6 +173,9 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		InputSystem->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::TeleportEnd);
 
 		InputSystem->BindAction(IA_Fire, ETriggerEvent::Started, this, &AVRPlayer::FireInput);
+		
+		// 잡기
+		InputSystem->BindAction(IA_Grab, ETriggerEvent::Started, this, &AVRPlayer::TryGrab);
 	}
 }
 
@@ -196,6 +215,7 @@ void AVRPlayer::TeleportStart(const FInputActionValue& Values)
 
 void AVRPlayer::TeleportEnd(const FInputActionValue& Values)
 {
+	
 	// 텔레포트 기능 리셋
 	// 만약 텔레포트가 불가능하다면
 	if (ResetTeleport() == false)
@@ -232,8 +252,8 @@ void AVRPlayer::DrawTeleportStraight()
 	Lines.RemoveAt(0, Lines.Num());
 	// 직선을 그리고 싶다.
 	// 필요정보 : 시작점, 종료점
-	FVector StartPos = RightHand->GetComponentLocation();
-	FVector EndPos = StartPos + RightHand->GetForwardVector() * 1000;
+	FVector StartPos = RightAim->GetComponentLocation();
+	FVector EndPos = StartPos + RightAim->GetForwardVector() * 1000;
 
 	// 두 점 사이에 충돌체가 있는지 체크하자
 	CheckHitTeleport(StartPos, EndPos);
@@ -282,8 +302,8 @@ void AVRPlayer::DrawTeleportCurve()
 	Lines.RemoveAt(0, Lines.Num());
 	// 주어진 속도로 투사체를 날려보내고 투사체의 지나간 점을 기록하자
 	// 1. 시작점, 방향, 힘도 투사체를 던지다.
-	FVector Pos = RightHand->GetComponentLocation();
-	FVector Dir = RightHand->GetForwardVector() * CurvedPower;
+	FVector Pos = RightAim->GetComponentLocation();
+	FVector Dir = RightAim->GetForwardVector() * CurvedPower;
 	// 시작점을 가장 먼저 기록하자
 	Lines.Add(Pos);
 	for (int i = 0; i < LineSmooth; i++)
@@ -421,5 +441,67 @@ void AVRPlayer::DrawCrosshair()
 	// -> 크로스헤어가 카메라를 바라보도록 처리
 	FVector Direction = Crosshair->GetActorLocation() - VRCamera->GetComponentLocation();
 	Crosshair->SetActorRotation(Direction.Rotation());
+}
+
+// 물체를 잡고 싶다.
+void AVRPlayer::TryGrab()
+{
+	// 중심점
+	FVector Center = RightHand->GetComponentLocation();
+	// 충돌체크(구충돌)
+	// 충돌한 물체들 기록할 배열
+	// 충돌 질의 작성
+	FCollisionQueryParams Param;
+	Param.AddIgnoredActor(this);
+	Param.AddIgnoredComponent(RightHand);
+	TArray<FOverlapResult> HitObjs;
+	bool bHit = GetWorld()->OverlapMultiByChannel(HitObjs, Center, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(GrabRange), Param);
+
+	// 충돌하지 않았다면 아무처리 하지 않는다.
+	if (bHit == false)
+	{
+		return;
+	}
+	// -> 가장 가까운 물체 잡도록 하자 (검출과정)
+	// 잡은 녀석이 있는지 여부 기억할 변수
+	bool IsGrabbed = false;
+	// 가장 가까운 물체 인덱스
+	int Closest = 0;
+	for (int i = 0; i<HitObjs.Num(); i++)
+	{
+		// 1. 물리 기능이 활성화 되어 있는 녀석만 판단
+		// -> 만약 부딪힌 컴포넌트가 물리기능이 비활성화 되어 있다면
+		if (HitObjs[i].GetComponent()->IsSimulatingPhysics() == false)
+		{
+			// 검출하고 싶지 않다.
+			continue;
+		}
+		// 잡았다!
+		IsGrabbed = true;
+
+		// 2. 현재 손과 가장 가까운 녀석과 이번에 검출할 녀석과 더 가까운 녀석이 있다면
+		// -> 필요속성 : 현재 가장가까운 녀석과 손과의 거리
+		float ClosestDist = FVector::Dist(HitObjs[Closest].GetActor()->GetActorLocation(), Center);
+		// -> 필요속성 : 이번에 검출할 녀석과 손과의 거리
+		float NextDist = FVector::Dist(HitObjs[i].GetActor()->GetActorLocation(), Center);
+		// 3. 만약 이번에가 현재꺼 보다 더 가깝다면
+		if (NextDist < ClosestDist)
+		{
+			//  -> 가장 가까운 녀석으로 변경하기
+			Closest = i;
+		}
+	}
+
+	// 만약 잡았다면
+	if (IsGrabbed)
+	{
+		GrabbedObject = HitObjs[Closest].GetComponent();
+		// -> 물체 물리기능 비활성화
+		GrabbedObject->SetSimulatePhysics(false);
+		GrabbedObject->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		// -> 손에 붙여주자
+		GrabbedObject->AttachToComponent(RightHand, FAttachmentTransformRules::KeepWorldTransform);
+	}
 }
 
