@@ -171,6 +171,32 @@ public: // 잡기 버튼을 누르면 물체를 잡고 싶다.
 	UPROPERTY()
 	class UPrimitiveComponent* GrabbedObject;
 
+	// 잡은 녀석이 있는지 여부 기억할 변수
+	bool IsGrabbed = false;
+
+	// 던지면 원하는 방향으로 날아가도록 하고싶다.
+	// 던질 방향
+	FVector ThrowDirection;
+	// 던질 힘
+	UPROPERTY(EditAnywhere, Category="Grab")
+	float ThrowPower = 1000;
+	// 직전 위치
+	FVector PrevPos;
+	// 이전 회전값
+	FQuat PrevRot;
+	// 회전방향
+	FQuat DeltaRotation;
+	// 회전빠르기
+	UPROPERTY(EditAnywhere, Category="Grab")
+	float ToquePower = 1000;
+
 	// 잡기시도기능
 	void TryGrab();
+	// 놓기
+	void UnTryGrab();
+	// 잡고있는중
+	void Grabbing();
+
+	UPROPERTY(EditDefaultsOnly, Category="Haptic")
+	class UHapticFeedbackEffect_Curve* HF_Fire;
 };

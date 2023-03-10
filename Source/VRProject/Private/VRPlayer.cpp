@@ -13,6 +13,7 @@
 #include <Components/CapsuleComponent.h>
 #include <NiagaraComponent.h>
 #include <../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
+#include <Haptics/HapticFeedbackEffect_Curve.h>
 
 #define PRINTTOScreen(msg) GEngine->AddOnScreenDebugMessage(0, 1, FColor::Blue, msg)
 // Sets default values
@@ -154,6 +155,8 @@ void AVRPlayer::Tick(float DeltaTime)
 
 	// Crosshair
 	DrawCrosshair();
+
+	Grabbing();
 }
 
 // Called to bind functionality to input
@@ -176,6 +179,7 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		
 		// 잡기
 		InputSystem->BindAction(IA_Grab, ETriggerEvent::Started, this, &AVRPlayer::TryGrab);
+		InputSystem->BindAction(IA_Grab, ETriggerEvent::Completed, this, &AVRPlayer::UnTryGrab);
 	}
 }
 
@@ -386,6 +390,12 @@ void AVRPlayer::DoWarp()
 
 void AVRPlayer::FireInput(const FInputActionValue& Values)
 {
+	// 진동처리 하고 싶다.
+	auto PC = Cast<APlayerController>(GetController());
+	if (PC)
+	{
+		PC->PlayHapticEffect(HF_Fire, EControllerHand::Right);
+	}
 	// LineTrace 이용해서 총을 쏘고 싶다.
 	// 시작점
 	FVector StartPos = RightAim->GetComponentLocation();
@@ -463,8 +473,7 @@ void AVRPlayer::TryGrab()
 		return;
 	}
 	// -> 가장 가까운 물체 잡도록 하자 (검출과정)
-	// 잡은 녀석이 있는지 여부 기억할 변수
-	bool IsGrabbed = false;
+	
 	// 가장 가까운 물체 인덱스
 	int Closest = 0;
 	for (int i = 0; i<HitObjs.Num(); i++)
@@ -502,6 +511,63 @@ void AVRPlayer::TryGrab()
 
 		// -> 손에 붙여주자
 		GrabbedObject->AttachToComponent(RightHand, FAttachmentTransformRules::KeepWorldTransform);
+
+		PrevPos = RightHand->GetComponentLocation();
 	}
+}
+
+// 잡은 녀석이 있으면 놓고싶다.
+void AVRPlayer::UnTryGrab()
+{
+	if (IsGrabbed == false)
+	{
+		return;
+	}
+
+	// 1. 잡지않은 상태로 전환
+	IsGrabbed = false;
+	// 2. 손에서 떼어내기
+	GrabbedObject->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	// 3. 물리기능 활성화
+	GrabbedObject->SetSimulatePhysics(true);
+	// 4. 충돌기능 활성화
+	GrabbedObject->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	// 던지기
+	GrabbedObject->AddForce(ThrowDirection * ThrowPower * GrabbedObject->GetMass());
+
+	// 회전 시키기
+	// 각속도 = (1 / dt) * dTheta(특정 축 기준 변위 각도 Axis, angle)
+	float Angle;
+	FVector Axis;
+	DeltaRotation.ToAxisAndAngle(Axis, Angle);
+	float dt = GetWorld()->DeltaTimeSeconds;
+	FVector AngularVelocity = (1.0f / dt) * Angle * Axis;
+	GrabbedObject->SetPhysicsAngularVelocityInRadians(AngularVelocity * ToquePower, true);
+
+	GrabbedObject = nullptr;
+}
+
+// 던질 정보를 업데이트하기위한 기능
+void AVRPlayer::Grabbing()
+{
+	if (IsGrabbed == false)
+	{
+		return;
+	}
+
+	// 던질방향 업데이트
+	ThrowDirection = RightHand->GetComponentLocation() - PrevPos;
+	// 회전방향 업데이트
+	// 쿼터니온 공식
+	// Angle1 = Q1, Angle2 = Q2
+	// Angle1 + Angle2 = Q1 * Q2
+	// -Angle1 = Q1.Inverse()
+	// Angle2 - Angle1 = Q2 * Q1.Inverse()
+	DeltaRotation = RightHand->GetComponentQuat() * PrevRot.Inverse();
+
+	// 이전위치 업데이트
+	PrevPos = RightHand->GetComponentLocation();
+	// 이전회전값 업데이트
+	PrevRot = RightHand->GetComponentQuat();
 }
 
