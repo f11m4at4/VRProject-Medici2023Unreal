@@ -15,6 +15,7 @@
 #include <../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
 #include <Haptics/HapticFeedbackEffect_Curve.h>
 #include <UMG/Public/Components/WidgetInteractionComponent.h>
+#include <Kismet/GameplayStatics.h>
 
 #define PRINTTOScreen(msg) GEngine->AddOnScreenDebugMessage(0, 1, FColor::Blue, msg)
 // Sets default values
@@ -94,9 +95,9 @@ void AVRPlayer::BeginPlay()
 		if(subSystem)
 		{
 			subSystem->AddMappingContext(IMC_VRInput, 0);
+			subSystem->AddMappingContext(IMC_Hand, 0);
 		}
 	}
-
 	ResetTeleport();
 
 	// 크로스헤어 객체 만들기
@@ -120,13 +121,13 @@ void AVRPlayer::BeginPlay()
 		// -> 기본 트랙킹 offset 설정
 		UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Eye);
 	}
+	
 }
 
 // Called every frame
 void AVRPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 	// HMD 가 연결돼 있지 않으면
 	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled() == false)
 	{

@@ -63,9 +63,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category="MotionController")
 	class UMotionControllerComponent* RightHand;
 	// 사용할 손 모델
-	UPROPERTY(VisibleAnywhere, Category="MotionController")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="MotionController")
 	class USkeletalMeshComponent* LeftHandMesh;
-	UPROPERTY(VisibleAnywhere, Category="MotionController")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="MotionController")
 	class USkeletalMeshComponent* RightHandMesh;
 
 public:	// Teleport Straight
@@ -206,4 +206,8 @@ protected: // Widget 관련 속성
 	
 	// Release 상태로 되돌려놓기
 	void ReleaseUIInput();
+
+public:
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	class UInputMappingContext* IMC_Hand;
 };
